@@ -1,0 +1,38 @@
+import Standard.Tuples(
+    Pair
+);
+
+module Stack is
+    type Stack[T: Type]: Linear;
+
+    """
+    Allocate a new stack that contains the specified value.
+    """
+    generic [T: Type]
+    function makeStack(value: T): Either[Stack[T], T];
+
+    """
+    Destroy the stack recursively, freeing all memory.
+    """
+    generic [T: Type]
+    function destroyStack(stack: Stack[T]): Unit;
+
+    """
+    Push a value to the stack. Allocates memory on the heap.
+
+    Returns 'Left' if successful, 'Right' if not.
+    """
+    generic [T: Type]
+    function push(
+        inputStack: Stack[T], 
+        inputValue: T
+    ): Either[Stack[T], Pair[Stack[T], T]];
+
+    """
+    Pop a value from the stack. Releases heap memory.
+
+    Returns 'Left' if the stack has more data, 'Right' if not.
+    """
+    generic [T: Type]
+    function pop(stack: Stack[T]): Either[Pair[Stack[T], T], T];
+end module.

@@ -1,0 +1,159 @@
+import Standard.Box(
+    Box,
+    makeBox,
+    unbox
+);
+import Standard.Tuples(
+    Pair
+);
+
+module body Stack is
+    record Stack[T: Type]: Linear is
+        data: Box[T];
+        next: Option[Box[Stack[T]]];
+        size: Int32;
+    end;
+
+    generic [T: Type]
+    function makeStack(value: T): Either[Stack[T], T] is
+        case makeBox(value) of
+            when Left(left: Box[T]) do
+                return Left(left =>
+                    Stack(
+                        data => left,
+                        next => None() : Option[Box[Stack[T]]],
+                        size => 1
+                    )
+                );
+            when Right(right: T) do
+                return Right(right => right);
+        end case;
+    end;
+    
+    generic [T: Type]
+    function destroyStack(stack: Stack[T]): Unit is
+        let {
+            data: Box[T],
+            next: Option[Box[Stack[T]]],
+            size: Int32
+        } := stack;
+
+        -- Free the memory for our value and discard the result.
+        let discard: T := unbox(data);
+
+        case next of
+            when Some(value: Box[Stack[T]]) do
+                -- Recursively destroy the stack.
+                let nextToDestroy: Stack[T] := unbox(value);
+                return destroyStack(nextToDestroy);
+            when None do
+                -- We are at the bottom of the stack.
+                return nil;
+        end case;
+    end;
+
+    """
+    Splitting up the 'push' implementation helps avoid variable shadowing in 
+    what would otherwise be nested case blocks.
+    """
+    generic [T: Type]
+    function pushInternal(
+        inputStack: Stack[T],
+        box: Box[T]
+    ): Either[Stack[T], Pair[Stack[T], T]] is
+        -- We have consumed inputValue and successfully produced Box[T]
+        -- out of it. Next, consume inputStack and attempt to allocate a
+        -- new instance of it on the heap.
+        let {
+            data: Box[T],
+            next: Option[Box[Stack[T]]],
+            size: Int32
+        } := inputStack;
+
+        -- Rebuilt a Stack[T] instance so we can box it.
+        let formerTop: Stack[T] := Stack(
+            data => data,
+            next => next,
+            size => size
+        );
+
+        case makeBox(formerTop) of
+            when Left(left: Box[Stack[T]]) do
+                -- At this point, "box" is our allocated input and "left" is the
+                -- newly allocated stack (the former top).
+                let top: Stack[T] := Stack(
+                    data => box,
+                    next => Some(value => left),
+                    size => size + 1
+                );
+                return Left(left => top);
+            when Right(right: Stack[T]) do
+                -- We have consumed the input value, so we are forced to
+                -- unbox it and deallocate. No leaks!
+                let result: Either[Stack[T], Pair[Stack[T], T]] := Right(
+                    right => Pair(
+                        first => right,
+                        second => unbox(box)
+                    ) : Pair[Stack[T], T]
+                );
+                return result;
+        end case;
+    end;
+
+    generic [T: Type]
+    function push(
+        inputStack: Stack[T], 
+        inputValue: T
+    ): Either[Stack[T], Pair[Stack[T], T]] is
+        -- Attempt to allocate space on the heap for our inputValue.
+        case makeBox(inputValue) of
+            when Left(left: Box[T]) do
+                return pushInternal(
+                    inputStack,
+                    left
+                );
+            when Right(right: T) do
+                let result: Either[Stack[T], Pair[Stack[T], T]] := Right(
+                    right => Pair(
+                        first => inputStack,
+                        second => right
+                    ) : Pair[Stack[T], T]
+                );
+                return result;
+        end case;
+    end;
+
+    generic [T: Type]
+    function internalPop(
+        inputValue: Box[T],
+        inputNext: Option[Box[Stack[T]]],
+        inputSize: Int32
+    ): Either[Pair[Stack[T], T], T] is
+        case inputNext of
+            when Some(value: Box[Stack[T]]) do
+                let result: Either[Pair[Stack[T], T], T] := Left(
+                    left => Pair(
+                        first => unbox(value),
+                        second => unbox(inputValue)
+                    ) : Pair[Stack[T], T]
+                );
+                return result;
+            when None do
+                let result: Either[Pair[Stack[T], T], T] := Right(
+                    right => unbox(inputValue)
+                );
+                return result;
+        end case;
+    end;
+
+    generic [T: Type]
+    function pop(stack: Stack[T]): Either[Pair[Stack[T], T], T] is
+        let {
+            data: Box[T],
+            next: Option[Box[Stack[T]]],
+            size: Int32
+        } := stack;
+
+        return internalPop(data, next, size);
+    end;
+end module body.

@@ -1,0 +1,12 @@
+import Stack(
+    Stack,
+    makeStack
+);
+
+module body Main is
+    function main(): ExitCode is
+        -- TODO need to add a destroy function.
+        -- let base: Either[Stack[Int32], Int32] := makeStack(9);
+        return ExitSuccess();
+    end;
+end module body.
