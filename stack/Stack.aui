@@ -24,8 +24,8 @@ module Stack is
     """
     generic [T: Type]
     function push(
-        inputStack: Stack[T], 
-        inputValue: T
+        stack: Stack[T], 
+        value: T
     ): Either[Stack[T], Pair[Stack[T], T]];
 
     """
