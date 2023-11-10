@@ -7,32 +7,24 @@ module body Main is
         end if;
     end;
 
-    -- It's unclear how to handle situations where nested `case` statements 
-    -- occur. The generalized form of the problem is destructuring forcing 
-    -- identical naming.
     function main(): ExitCode is
         let a: Option[Int32] := fx(5);
         let b: Option[Int32] := fx(20);
 
         case a of
             -- This forces `value` to be bound.
-            when Some(value: Int32) do
-                print("Some1");
-                printLn(value);
+            when Some(value as v1: Int32) do
+                print("Some1 ");
+                printLn(v1);
                 case b of
-                    -- If we attempt to use some other name, `foo`, we get:
-                    -- >> The set of slots (`foo`) in the case statement doesn't match the set of slots in the union definition (`value`).
-                    -- But here, `value` is already bound! The compiler will
-                    -- correctly throw an error:
-                    -- >> push_var: var with the name value already exists
-                    when Some(value: Int32) do
-                        print("Some2");
-                        printLn(value);
+                    when Some(value as v2: Int32) do
+                        print("Some2 ");
+                        printLn(v2);
                     when None do
-                        println("None2");
+                        printLn("None2");
                 end case;
             when None do
-                println("None1");
+                printLn("None1");
         end case;
 
         return ExitSuccess();
